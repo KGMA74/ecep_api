@@ -1,0 +1,41 @@
+services:
+  db:
+    image: postgres:latest
+    container_name: postgresql
+    ports:
+      - '5432:5432'
+    volumes:
+      - pg_data:/var/lib/postgresql/data:rw
+    env_file:
+      - .env.local
+    networks:
+      - ecep_network
+
+  api:
+    build: .
+    container_name: ecep_backend
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    networks:
+      - ecep_network
+
+  nginx:
+    image: nginx:latest
+    container_name: ecep_nginx
+    volumes:
+      - ./nginx:containerPath:ro
+    depends_on:
+      - api
+    networks:
+      - ecep_network
+
+volumes:
+  pg_data:
+
+networks:
+  ecep_network:
+    driver: bridge
