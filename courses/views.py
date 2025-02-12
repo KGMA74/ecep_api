@@ -5,8 +5,8 @@ from django.shortcuts import get_object_or_404
 from rest_framework.decorators import api_view, action
 from rest_framework import generics, status, viewsets
 from users.models import Teacher
-from .models import Course, CourseRequest
-from .serializers import CourseSerializer, CourseRequestSerializer
+from .models import Course, CourseRequest, CourseProgress
+from .serializers import CourseSerializer, CourseRequestSerializer, CourseProgressSerializer
 
 # Create your views here.
 
@@ -92,6 +92,29 @@ class CourseRequestViewSet(viewsets.ModelViewSet):
         return Response({"message": "Course request rejected."}, status=status.HTTP_200_OK)
 
 
-    
+class CourseProgressView(APIView):
+    permission_classes = [IsAuthenticated]
 
+    def get(self, request, course_id):
+        """ Récupère la progression d'un utilisateur dans un cours spécifique. """
+        course_progress = get_object_or_404(CourseProgress, user=request.user, course_id=course_id)
+        serializer = CourseProgressSerializer(course_progress)
+        return Response(serializer.data)
 
+    def patch(self, request, course_id):
+        """ Met à jour la progression ou la note d'un utilisateur pour un cours. """
+        course_progress = get_object_or_404(CourseProgress, user=request.user, course_id=course_id)
+        
+        # Mise à jour de la progression ou de la note
+        progress = request.data.get('progress_percentage')
+        grade = request.data.get('grade')
+
+        if progress is not None:
+            course_progress.update_progress(progress)
+        
+        if grade is not None:
+            course_progress.add_grade(grade)
+
+        # Sérialiser les nouvelles données
+        serializer = CourseProgressSerializer(course_progress)
+        return Response(serializer.data, status=status.HTTP_200_OK)

@@ -3,15 +3,8 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db.models.signals import post_save
 from django.dispatch import receiver
 from .manager import UserManager
-
-class BaseModel(models.Model):
-    id = models.AutoField(primary_key=True)
-    created_at = models.DateTimeField(auto_now_add=True)
-    updated_at = models.DateTimeField(auto_now=True)
-
-    class Meta:
-        abstract = True
-
+from core.models import BaseModel
+from courses.models import Course
 
 class User(AbstractBaseUser, PermissionsMixin, BaseModel):
     
@@ -66,22 +59,46 @@ class Teacher(BaseModel):
     degree = models.CharField(max_length=100)
 
     def __str__(self):
-        return f"Teacher: {self.nickname}"
+        return f"Teacher: {self.user.nickname}"
 
 class Student(BaseModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student')
-    level = models.CharField(max_length=50)
-    courses = models.ManyToManyField('courses.Course', related_name="students")
+    level = models.CharField(max_length=50, default="CM2")
+    courses = models.ManyToManyField('courses.Course', related_name="students", blank=True)
 
     def __str__(self):
-        return f"Student: {self.nickname} ({self.student_id})"
+        return f"Student: {self.user.nickname} ({self.id})"
+
+    def enroll_in_course(self, course):
+        if isinstance(course, Course):
+            if course.min_level_required <= self.level:
+                pass
+            self.courses.add(course)
+
+    def drop_course(self, course):
+        if isinstance(course, Course):
+            self.courses.remove(course)
+
+    def get_courses(self):
+        return self.courses.all()
     
 class Parent(BaseModel):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='parent')
     children = models.ManyToManyField(Student, related_name='parents', blank=True)
 
     def __str__(self):
-        return f"Parent: {self.username}"
+        return f"Parent: {self.user.nickname}"
+    
+    def add_child(self, child):
+        if isinstance(child, Student):
+            self.children.add(child)
+
+    def remove_child(self, child):
+        if isinstance(child, Student):
+            self.children.remove(child)
+
+    def get_children(self):
+        return self.children.all()
     
 #pour la creation d un profile auto associe un new user
 @receiver(post_save, sender=User)
@@ -89,13 +106,14 @@ def create_user_profile(sender, instance, created, **kwargs):
     if created:
         Profile.objects.create(user=instance)
         
-    if instance.role == 'teacher':
-        Teacher.objects.create(user=instance)
+        role_mapping = {
+                    'teacher': Teacher,
+                    'student': Student,
+                    'parent': Parent
+                }
         
-    elif instance.role == 'student':
-        Student.objects.create(user=instance) 
+        ModelClass = role_mapping.get(instance.role)
         
-    elif instance.role == 'parent':
-        Parent.objects.create(user=instance) 
-            
+        if ModelClass:
+            ModelClass.objects.get_or_create(user=instance)
         

@@ -1,9 +1,15 @@
-from .serializers import ProfileSerializer, StudentSerializer, TeacherSerializer
-from django.conf import settings
+from .serializers import (
+    ProfileSerializer, TeacherSerializer, StudentSerializer, ParentSerializer,
+    EnrollCourseSerializer, AddChildSerializer
+)
+from .models import Profile, Teacher, Student, Parent
+from django.conf import settings 
+from django.shortcuts import get_object_or_404
+from courses.models import Course
 from rest_framework.response import Response
-from rest_framework import generics, status
+from rest_framework import generics, status, viewsets
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
-from rest_framework.decorators import api_view, permission_classes
+from rest_framework.decorators import api_view, action, permission_classes
 from djoser.social.views import ProviderAuthView
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
@@ -178,3 +184,65 @@ def createStudent(request):
             serializer.save()
             
     return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
+
+class ProfileViewSet(viewsets.ModelViewSet):
+    queryset = Profile.objects.all()
+    serializer_class = ProfileSerializer
+
+class TeacherViewSet(viewsets.ModelViewSet):
+    queryset = Teacher.objects.all()
+    serializer_class = TeacherSerializer
+
+class StudentViewSet(viewsets.ModelViewSet):
+    queryset = Student.objects.all()
+    serializer_class = StudentSerializer
+
+    @action(detail=True, methods=['post'])
+    def enroll(self, request, pk=None):
+        """Inscrire un étudiant à un cours."""
+        student = self.get_object()
+        serializer = EnrollCourseSerializer(data=request.data)
+        if serializer.is_valid():
+            course = get_object_or_404(Course, id=serializer.validated_data['course_id'])
+            student.enroll_in_course(course)
+            return Response({'message': 'Student enrolled successfully'}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'])
+    def drop(self, request, pk=None):
+        """Désinscrire un étudiant d’un cours."""
+        student = self.get_object()
+        serializer = EnrollCourseSerializer(data=request.data)
+        if serializer.is_valid():
+            course = get_object_or_404(Course, id=serializer.validated_data['course_id'])
+            student.courses.remove(course)
+            return Response({'message': 'Student dropped from course'}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+class ParentViewSet(viewsets.ModelViewSet):
+    queryset = Parent.objects.all()
+    serializer_class = ParentSerializer
+
+    @action(detail=True, methods=['post'])
+    def add_child(self, request, pk=None):
+        """Ajouter un enfant à un parent."""
+        parent = self.get_object()
+        serializer = AddChildSerializer(data=request.data)
+        if serializer.is_valid():
+            student = get_object_or_404(Student, id=serializer.validated_data['student_id'])
+            parent.children.add(student)
+            return Response({'message': 'Child added successfully'}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+
+    @action(detail=True, methods=['post'])
+    def remove_child(self, request, pk=None):
+        """Supprimer un enfant d’un parent."""
+        parent = self.get_object()
+        serializer = AddChildSerializer(data=request.data)
+        if serializer.is_valid():
+            student = get_object_or_404(Student, id=serializer.validated_data['student_id'])
+            parent.children.remove(student)
+            return Response({'message': 'Child removed successfully'}, status=status.HTTP_200_OK)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
