@@ -16,7 +16,7 @@ class AudioSerializer(serializers.Serializer):
         
         
 class ResourceSerializer(PolymorphicSerializer):
-    model_serializer_maping = {
+    serializer_mapping = {
         Video: VideoSerializer,
         Audio: AudioSerializer
     }

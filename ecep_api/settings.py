@@ -61,6 +61,7 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -163,8 +164,8 @@ CORS_ALLOW_ALL_ORIGINS = True
 AUTH_USER_MODEL = 'users.User'
 
 AUTH_COOKIE = 'access'
-AUTH_COOKIE_ACCESS_MAX_AGE = 60 * 10 #10mn
-AUTH_COOKIE_REFRESH_MAX_AGE = 60 * 60 * 24 #1jour
+AUTH_COOKIE_ACCESS_MAX_AGE = 60 * 60 * 24 #1j
+AUTH_COOKIE_REFRESH_MAX_AGE = 60 * 60 * 24 * 7 #1semaine
 AUTH_COOKIE_SECURE = getenv('AUTH_COOKIE_SECURE', 'True') == 'True'
 AUTH_COOKIE_HTTP_ONLY = True
 AUTH_COOKIE_PATH = '/'
@@ -196,8 +197,8 @@ DJOSER = {
 
 SIMPLE_JWT = {
     # Durée de vie des tokens d'accès et de rafraîchissement
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=10),
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=10),
+    "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
 
     # Gestion des tokens de rafraîchissement
     'ROTATE_REFRESH_TOKENS': True,

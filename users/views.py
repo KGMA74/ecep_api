@@ -5,6 +5,8 @@ from rest_framework import generics, status
 from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
 from rest_framework.decorators import api_view, permission_classes
 from djoser.social.views import ProviderAuthView
+from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
+from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -121,8 +123,7 @@ class CustomTokenVerifyView(TokenVerifyView):
 @api_view(['POST'])
 def LogoutView(request):
     if request.method == 'POST':
-        
-        # Supprimer les token en mettant leur valeur des cookies a ''
+        # Supprimer les tokens en mettant leur valeur des cookies à ''
         response = Response(status=status.HTTP_204_NO_CONTENT)
         
         response.set_cookie(
@@ -147,6 +148,33 @@ def LogoutView(request):
             domain=settings.AUTH_COOKIE_DOMAIN
         )
 
+        # Ajouter les tokens à la liste de blackliste
+
+        refresh_token = request.data.get('refresh', None)
+        access_token = request.data.get('access', None)
+        
+        try:
+            token = RefreshToken(refresh_token)
+            token.blacklist()
+        except Exception as e:
+            pass
+        
+        try:
+            token = AccessToken()
+            token.ton_bac
+        except Exception as e:
+            pass
+
         return response
     
     return Response("", status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+@api_view(['POST'])
+def createStudent(request):
+    if request.method == 'POST':
+        serializer = StudentSerializer(data=request.data)
+        
+        if serializer.is_valid():
+            serializer.save()
+            
+    return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)

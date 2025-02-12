@@ -19,11 +19,8 @@ class Image(Resource):
     resolution = models.CharField(max_length=50)
     file = models.ImageField(upload_to='resources/images/')
     
-class Image(Resource):
-    resolution = models.CharField(max_length=50)
-    file = models.FileField(upload_to='resources/pdf/')
-    
 class Audio(Resource):
     file = models.FileField(upload_to='resources/audios/')
     
-    
+class Document(Resource):
+    file = models.FileField(upload_to='resources/documents/')
