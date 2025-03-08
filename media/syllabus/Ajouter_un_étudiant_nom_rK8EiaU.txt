@@ -1,0 +1,23 @@
+Ajouter un étudiant (nom, prénom, date de naissance, et email).
+1) Modifier les informations d'un étudiant.
+2. Supprimer un étudiant.
+3. Afficher la liste des étudiants.
+4. Rechercher un étudiant par nom.
+
+Étapes de réalisation :
+Création de la base de données :
+
+Créer une base de données student_db.
+Créer une table students avec les champs id, first_name, last_name, birth_date, et email.
+
+Configuration JDBC :
+
+Ajouter les dépendances JDBC (si vous utilisez Maven ou Gradle).
+Configurer la connexion à la base de données avec le driver JDBC approprié (par exemple, MySQL ou PostgreSQL).
+Développement des fonctionnalités :
+
+Ajouter un étudiant : Implémenter une méthode qui prend les informations d'un étudiant et les insère dans la base de données.
+Modifier un étudiant : Implémenter une méthode pour mettre à jour les informations d'un étudiant.
+Supprimer un étudiant : Implémenter une méthode pour supprimer un étudiant par son identifiant.
+Afficher tous les étudiants : Implémenter une méthode pour récupérer et afficher tous les étudiants.
+Rechercher un étudiant : Implémenter une méthode pour rechercher un étudiant par son nom.

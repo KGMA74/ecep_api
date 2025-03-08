@@ -16,7 +16,12 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
     ]
     
     email = models.EmailField(verbose_name='email address', max_length=255, unique=True)
-    nickname = models.CharField(max_length=50, unique=True)
+    firstname = models.CharField(max_length=100)
+    lastname = models.CharField(max_length=50)
+    # nickname = models.CharField(max_length=50, unique=True)
+    
+    
+    
     #la definition du champ password n'est pas necessaire car faite par defaut par django
     
     # createdt_a = models.DateTimeField(auto_now_add=True)
@@ -30,7 +35,7 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
     objects = UserManager()
 
     USERNAME_FIELD = 'email'
-    REQUIRED_FIELDS = ['nickname', 'role']
+    REQUIRED_FIELDS = ['firstname', 'lastname', 'role']
 
     def __str__(self):
         return self.email
@@ -42,38 +47,39 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
         return True
     
 
-class Profile(BaseModel):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile')
+class Profile(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile', primary_key=True)
     avatar = models.ImageField(upload_to='avatars/', null=True, blank=True)
     bio = models.TextField(null=True, blank=True)
     phone_number = models.CharField(max_length=20, null=True, blank=True)
-    # address = models.CharField(max_length=255, null=True, blank=True)
+    address = models.CharField(max_length=255, null=True, blank=True)
 
     def __str__(self):
         return f"Profile of {self.user.nickname}"
 
 # === User Specialization === #
-class Teacher(BaseModel):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='teacher')
+class Teacher(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='teacher', primary_key=True)
     specialty = models.CharField(max_length=100)
     degree = models.CharField(max_length=100)
 
     def __str__(self):
         return f"Teacher: {self.user.nickname}"
 
-class Student(BaseModel):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student')
-    level = models.CharField(max_length=50, default="CM2")
-    courses = models.ManyToManyField('courses.Course', related_name="students", blank=True)
+class Student(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student', primary_key=True)
+    # birth_date = models.DateField()
+    xp = models.IntegerField(default=0)
+    level = models.ForeignKey("Level", on_delete=models.SET_NULL, default=0, null=True)
 
     def __str__(self):
-        return f"Student: {self.user.nickname} ({self.id})"
+        return f"Student: {self.user.lastname} ({self.user})"
 
     def enroll_in_course(self, course):
-        if isinstance(course, Course):
-            if course.min_level_required <= self.level:
-                pass
+        if isinstance(course, Course) and course.min_level_required <= self.level:
             self.courses.add(course)
+            return True
+        return False
 
     def drop_course(self, course):
         if isinstance(course, Course):
@@ -82,8 +88,23 @@ class Student(BaseModel):
     def get_courses(self):
         return self.courses.all()
     
-class Parent(BaseModel):
-    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='parent')
+    def update_level(self):
+        """Met à jour le niveau de l'étudiant en fonction des XP accumulés."""
+        levels = Level.objects.all().order_by('min_xp')  # Trie les niveaux par XP croissant
+        for level in levels:
+            if self.xp >= level.min_xp:
+                self.level = level
+            else:
+                break
+        self.save()
+        
+    def add_xp(self, points):
+        """Ajoute des XP à l'élève et met à jour son niveau."""
+        self.xp += points
+        self.update_level()
+    
+class Parent(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='parent', primary_key=True)
     children = models.ManyToManyField(Student, related_name='parents', blank=True)
 
     def __str__(self):
@@ -106,14 +127,32 @@ def create_user_profile(sender, instance, created, **kwargs):
     if created:
         Profile.objects.create(user=instance)
         
-        role_mapping = {
-                    'teacher': Teacher,
-                    'student': Student,
-                    'parent': Parent
-                }
+        # role_mapping = {
+        #             'teacher': Teacher,
+        #             'student': Student,
+        #             'parent': Parent
+        #         }
         
-        ModelClass = role_mapping.get(instance.role)
+        # ModelClass = role_mapping.get(instance.role)
         
-        if ModelClass:
-            ModelClass.objects.get_or_create(user=instance)
+        # if ModelClass:
+        #     ModelClass.objects.get_or_create(user=instance)
+            
+class XPTransaction(models.Model):
+    Student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="xp_transactions")
+    xp_points = models.IntegerField()
+    reason = models.CharField(max_length=255)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.student.user.username} earned {self.xp_points} XP for {self.reason}"
+
+
+class Level(models.Model):
+    level = models.IntegerField(default=0, primary_key=True)
+    min_xp = models.IntegerField()
+    
+    def __str__(self):
+        return f"Level {self.level} (XP >= {self.min_xp})"
+
         

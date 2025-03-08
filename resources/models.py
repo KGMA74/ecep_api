@@ -5,6 +5,7 @@ from polymorphic.models import PolymorphicModel
 class Resource(PolymorphicModel):
     title = models.CharField(max_length=255)
     description = models.TextField()
+    course = models.ForeignKey("courses.Course", related_name='resources', on_delete=models.CASCADE)
     created_at = models.DateTimeField(auto_now_add=True)
     
     def __str__(self):

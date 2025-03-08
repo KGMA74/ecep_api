@@ -40,6 +40,7 @@ ALLOWED_HOSTS = getenv('DJANGO_ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
 # Application definition
 
 INSTALLED_APPS = [
+    # 'channel',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -51,12 +52,18 @@ INSTALLED_APPS = [
     'rest_framework',
     'rest_framework_simplejwt',
     'corsheaders',
+    'polymorphic',
     'djoser',
     
     # project applications
     'users',
+    'notifications',
+    'assignments',
+    'badges',
+    'core',
     'resources',
     'courses',
+    'quizzes'
     
 ]
 
@@ -95,24 +102,33 @@ WSGI_APPLICATION = 'ecep_api.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/4.2/ref/settings/#databases
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+if DEBUG:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': getenv('POSTGRES_NAME'),
+            'USER': getenv('POSTGRES_USER'),
+            'PASSWORD': getenv('POSTGRES_PASSWORD'),
+            'HOST': getenv('POSTGRES_HOST', default='localhost'),
+            'PORT': getenv('POSTGRES_PORT', default='5432'),    
+        }
+    }
 
-# DATABASES = {
+# CHANNEL_LAYERS = {
 #     'default': {
-#         'ENGINE': 'django.db.backends.postgresql',
-#         'NAME': getenv('POSTGRES_NAME'),
-#         'USER': getenv('POSTGRES_USER'),
-#         'PASSWORD': getenv('POSTGRES_PASSWORD'),
-#         'HOST': getenv('POSTGRES_HOST', default='localhost'),
-#         'PORT': getenv('POSTGRES_PORT', default='5432'),    
-#     }
+#         'BACKEND': 'channels_redis.core.RedisChannelLayer',
+#         'CONFIG': {
+#             "hosts": [('redis', 6379)],  # 'redis' est le nom du service Redis dans Docker Compose
+#         },
+#     },
 # }
-
 
 # Password validation
 # https://docs.djangoproject.com/en/4.2/ref/settings/#auth-password-validators
@@ -150,10 +166,16 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
+MEDIA_URL = '/media/'
+MEDIA_ROOT = path.join(BASE_DIR, 'media')
+
+
 # Default primary key field type
 # https://docs.djangoproject.com/en/4.2/ref/settings/#default-auto-field
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+AUTH_USER_MODEL = 'users.User'
 
 SITE_NAME = 'eCEP'
 DOMAIN = getenv('DOMAIN')
@@ -161,15 +183,13 @@ CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = True
 #CORS_ALLOWED_ORIGINS = getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:3000,http://localhost:3000').split(',')
 
-AUTH_USER_MODEL = 'users.User'
-
 AUTH_COOKIE = 'access'
 AUTH_COOKIE_ACCESS_MAX_AGE = 60 * 60 * 24 #1j
 AUTH_COOKIE_REFRESH_MAX_AGE = 60 * 60 * 24 * 7 #1semaine
 AUTH_COOKIE_SECURE = getenv('AUTH_COOKIE_SECURE', 'True') == 'True'
 AUTH_COOKIE_HTTP_ONLY = True
 AUTH_COOKIE_PATH = '/'
-AUTH_COOKIE_SAMESITE = 'None'
+AUTH_COOKIE_SAMESITE = 'lax'
 AUTH_COOKIE_DOMAIN = getenv('DOMAIN', '127.0.0.1')
 
 REST_FRAMEWORK = {
@@ -187,10 +207,16 @@ DJOSER = {
     'ACTIVATION_URL': 'activation/{uid}/{token}',
     'USER_CREATE_PASSWORD_RETYPE': True,  # Pour demander la confirmation du mot de passe à la création de l'utilisateur
     'PASSWORD_RESET_CONFIRM_RETYPE': True,  # Pour demander la confirmation du nouveau mot de passe à la réinitialisation
-    'TOKEN_MODEL': None,  # Utilise JWT au lieu des tokens par défaut de Djoser
+    'TOKEN_MODEL': None,  
+    "EMAIL": {
+        "activation": "users.email.CustomActivationEmail",
+    },
     'PERMISSIONS': {
         'user':  ["rest_framework.permissions.AllowAny"],
         'user_list':  ["rest_framework.permissions.AllowAny"]
+    },
+    'SERIALIZERS': {
+        'user': 'users.serializers.CustomUserSerializer'
     }
 }
 

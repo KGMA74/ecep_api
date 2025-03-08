@@ -10,15 +10,12 @@ ENV PYTHONUNBUFFERED=1
 
 # Install pip requirements
 COPY requirements.txt .
-RUN pip install --upgrade setuptools && \
-    pip install --upgrade pip && \
+RUN pip install --upgrade pip && \
+    pip install --upgrade setuptools && \
     python -m pip install -r requirements.txt
 
-WORKDIR /app
-COPY . /app
+WORKDIR /backend
+COPY . /backend/
 
-
-RUN adduser -u 5678 --disabled-password --gecos "" appuser && chown -R appuser /app
-USER appuser
 
 CMD ["sh", "-c", "python manage.py makemigrations && python manage.py migrate && gunicorn --bind 0.0.0.0:8000 ecep_api.wsgi"]

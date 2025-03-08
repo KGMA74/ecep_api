@@ -2,6 +2,7 @@ from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework.permissions import IsAdminUser, IsAuthenticated
 from django.shortcuts import get_object_or_404
+from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, action
 from rest_framework import generics, status, viewsets
 from users.models import Teacher
@@ -27,11 +28,10 @@ from .serializers import CourseSerializer, CourseRequestSerializer, CourseProgre
                    
 #     return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
 
-class retrieveCourseView(generics.RetrieveAPIView):
+class CourseViewSet(viewsets.ModelViewSet):
     queryset = Course.objects.all()
     serializer_class = CourseSerializer
-    lookup_field = 'id'
-    
+    permission_classes = [AllowAny]
     
 
 
