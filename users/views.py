@@ -6,6 +6,7 @@ from .models import Profile, Teacher, Student, Parent, Student
 from django.conf import settings 
 from djoser.views import UserViewSet
 from django.shortcuts import get_object_or_404
+from courses.serializers import CourseSerializer
 from courses.models import Course
 from rest_framework.response import Response
 from rest_framework import generics, status, viewsets
@@ -136,39 +137,43 @@ from .serializers import UserSerializer
 
 class CustomUserViewSet(UserViewSet):
 
-    def create(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+    def perform_create(self, serializer, *args, **kwargs):
         
-        if serializer.is_valid():
-            user = serializer.save()
+        
+        # serializer = self.get_serializer(data=request.data)
+        super().perform_create(serializer)
+        user = serializer.instance 
+        # if serializer.is_valid():
+        #     user = serializer.save()
+            
 
-            # Création du profil en fonction du rôle
-            role = user.role
-            print("mmmmmmmmmmmmmmmmmrole=", role)
-            if role == "student":
-                # level_id = request.data.get("level")
-                # level = Level.objects.get(id=level_id) if level_id else None
-                Student.objects.create(user=user)
-            elif role == "teacher":
-                print("999999999999999999999999999999999")
-                specialty = request.data.get("specialty", "")
-                degree = request.data.get("degree", "")
-                Teacher.objects.create(user=user, specialty=specialty, degree=degree)
-            elif role == "parent":
-                Parent.objects.create(user=user)
+        # Création du profil en fonction du rôle
+        role = user.role
+        print("mmmmmmmmmmmmmmmmmrole=", role)
+        if role == "student":
+            # level_id = request.data.get("level")
+            # level = Level.objects.get(id=level_id) if level_id else None
+            Student.objects.create(user=user)
+        elif role == "teacher":
+            print("999999999999999999999999999999999")
+            specialty = self.request.data.get("specialty", "")
+            degree = self.request.data.get("degree", "")
+            Teacher.objects.create(user=user, specialty=specialty, degree=degree)
+        elif role == "parent":
+            Parent.objects.create(user=user)
 
-            # Réponse de succès
-            return Response({
-                "message": "User registered successfully",
-                "user": {
-                    "email": user.email,
-                    "firstname": user.firstname,
-                    "role": role
-                }
-            }, status=status.HTTP_201_CREATED)
+        # Réponse de succès
+        return Response({
+            "message": "User registered successfully",
+            "user": {
+                "email": user.email,
+                "firstname": user.firstname,
+                "role": role
+            }
+        }, status=status.HTTP_201_CREATED)
 
-        # En cas d'erreurs de validation dans le sérialiseur
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    # En cas d'erreurs de validation dans le sérialiseur
+    # return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
     
 @api_view(['POST'])
@@ -244,6 +249,7 @@ class TeacherViewSet(viewsets.ModelViewSet):
 class StudentViewSet(viewsets.ModelViewSet):
     queryset = Student.objects.all()
     serializer_class = StudentSerializer
+    
 
     @action(detail=True, methods=['post'])
     def enroll(self, request, pk=None):
@@ -255,6 +261,14 @@ class StudentViewSet(viewsets.ModelViewSet):
             student.enroll_in_course(course)
             return Response({'message': 'Student enrolled successfully'}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    @action(detail=True, methods=['get'])
+    def enrolled_courses(self, request, pk=None):
+        """Liste des cours auxquels l'étudiant est inscrit."""
+        student = self.get_object()
+        courses = student.courses_enrolled.all()
+        serializer = CourseSerializer(courses, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
     @action(detail=True, methods=['post'])
     def drop(self, request, pk=None):
@@ -277,7 +291,7 @@ class StudentViewSet(viewsets.ModelViewSet):
             return Response({"error": "Points are required"}, status=status.HTTP_400_BAD_REQUEST)
 
         student.add_xp(points)
-        return Response({"message": f"{points} XP added to {student.user.nickname}. Current level: {student.level.name}"}, status=status.HTTP_200_OK)
+        return Response({"message": f"{points} XP added to {student.user.fullname}. Current level: {student.level.name}"}, status=status.HTTP_200_OK)
 
 class ParentViewSet(viewsets.ModelViewSet):
     queryset = Parent.objects.all()

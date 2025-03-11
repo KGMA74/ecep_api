@@ -14,8 +14,8 @@ class Course(BaseModel):
     syllabus = models.TextField()
     start_date = models.DateField()
     end_date = models.DateField()
-    credits = models.IntegerField()
-    mattter = models.CharField(choices=MATTER_CHOICES, default='francais', max_length=50)
+    credits = models.IntegerField(default=1)
+    matter = models.CharField(choices=MATTER_CHOICES, default='francais', max_length=50)
     min_level_required = models.IntegerField(default=1)
     created_by = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="courses")
     students = models.ManyToManyField("users.Student", related_name="courses_enrolled", blank=True)
@@ -96,7 +96,10 @@ class CourseProgress(models.Model):
     grade = models.FloatField(default=0.0)  
     quizzes = models.ManyToManyField('quizzes.Quiz', through='quizzes.QuizResult')
     completion_status = models.BooleanField(default=False)  
-
+    
+    class Meta:
+        unique_together = ('student', 'course')
+        
     def update_progress(self, new_progress: int):
         """Met à jour le pourcentage de progression et ajuste le statut de complétion."""
         self.progress_percentage = new_progress

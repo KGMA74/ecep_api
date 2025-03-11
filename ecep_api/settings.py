@@ -216,7 +216,8 @@ DJOSER = {
         'user_list':  ["rest_framework.permissions.AllowAny"]
     },
     'SERIALIZERS': {
-        'user': 'users.serializers.CustomUserSerializer'
+        'user': 'users.serializers.CustomUserSerializer',
+        'current_user': 'users.serializers.CustomUserSerializer'
     }
 }
 
@@ -275,9 +276,11 @@ SIMPLE_JWT = {
 }
 
 
-#email.setting 
+# email.setting 
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+
 EMAIL_HOST = getenv('EMAIL_HOST')
 EMAIL_FROM = getenv('EMAIL_FROM')
 EMAIL_HOST_USER = getenv('EMAIL_HOST_USER')

@@ -1,14 +1,28 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <title>Activer votre compte</title>
-</head>
-<body>
-    <h1>Bonjour {{ user.first_name }} {{ user.last_name }} !</h1>
-    <p>Merci de vous être inscrit sur notre plateforme. Veuillez cliquer sur le lien ci-dessous pour activer votre compte.</p>
-    <p><a href="{{ activation_link }}">Activer mon compte</a></p>
-    <p>Si vous n'avez pas demandé cette inscription, ignorez ce message.</p>
-    <p>Cordialement, <br> L'équipe d'administration</p>
-</body>
-</html>
+{% load i18n %}
+
+{% block subject %}
+{% blocktrans %}Activation de votre compte sur {{ site_name }}{% endblocktrans %}
+{% endblock subject %}
+
+{% block text_body %}
+<p>{% blocktrans %}Vous recevez cet email parce que vous devez terminer le processus d'activation sur {{ site_name }}.{% endblocktrans %}</p>
+
+<p>{% trans "Veuillez aller à la page suivante pour activer votre compte :" %}</p>
+<p>{{ protocol }}://{{ domain }}/{{ url|safe }}</p>
+
+<p>{% trans "Merci d'utiliser notre plateforme !" %}</p>
+
+
+<p>{% blocktrans %}L'équipe {{ site_name }}{% endblocktrans %}</p>
+<p>{% endblock text_body %}
+
+{% block html_body %}
+<p>{% blocktrans %}Vous recevez cet email parce que vous devez terminer le processus d'activation sur {{ site_name }}.{% endblocktrans %}</p>
+
+<p>{% trans "Veuillez aller à la page suivante pour activer votre compte :" %}</p>
+<p><a href="{{ protocol }}://{{ domain }}/{{ url|safe }}">{{ protocol }}://{{ domain }}/{{ url|safe }}</a></p>
+
+<p>{% trans "Merci d'utiliser notre plateforme !" %}</p>
+
+<p>{% blocktrans %}L'équipe {{ site_name }}{% endblocktrans %}</p>
+{% endblock html_body %}

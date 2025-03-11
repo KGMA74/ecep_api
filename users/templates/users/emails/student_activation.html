@@ -1,5 +1,35 @@
-<p>Bonjour {{ user.nickname }},</p>
-<p>Félicitations pour ton inscription sur eCEP ! 🎉</p>
-<p>Apprends et progresse avec des cours adaptés au CM2.</p>
-<p><a href="{{ url }}">Clique ici pour activer ton compte</a></p>
-<p>L'équipe eCEP 🚀</p>
+{% load i18n %}
+
+{% block subject %}
+{% blocktrans %}Activation de votre compte sur {{ site_name }}{% endblocktrans %}
+{% endblock subject %}
+
+{% block text_body %}
+{% blocktrans %}Bonjour {{ user.nickname }},{% endblocktrans %}
+
+{% blocktrans %}Félicitations pour ton inscription sur {{ site_name }} ! 🎉{% endblocktrans %}
+
+{% blocktrans %}Apprends et progresse avec des cours adaptés au CM2.{% endblocktrans %}
+
+{% trans "Clique ici pour activer ton compte :" %}
+{{ url }}
+
+{% trans "Merci de faire partie de notre communauté !" %}
+
+{% blocktrans %}L'équipe {{ site_name }} 🚀{% endblocktrans %}
+{% endblock text_body %}
+
+{% block html_body %}
+<p>{% blocktrans %}Bonjour {{ user.nickname }},{% endblocktrans %}</p>
+
+<p>{% blocktrans %}Félicitations pour ton inscription sur {{ site_name }} ! 🎉{% endblocktrans %}</p>
+
+<p>{% blocktrans %}Apprends et progresse avec des cours adaptés au CM2.{% endblocktrans %}</p>
+
+<p>{{ trans "Clique ici pour activer ton compte: " }}</p>
+<p><a href="{{ protocol }}://{{ domain }}/{{ url|safe }}">{{ protocol }}://{{ domain }}/{{ url|safe }}</a></p>
+
+<p>{% trans "Merci de faire partie de notre communauté !" %}</p>
+
+<p>{% blocktrans %}L'équipe {{ site_name }} 🚀{% endblocktrans %}</p>
+{% endblock html_body %}

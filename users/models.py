@@ -18,7 +18,7 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
     email = models.EmailField(verbose_name='email address', max_length=255, unique=True)
     firstname = models.CharField(max_length=100)
     lastname = models.CharField(max_length=50)
-    # nickname = models.CharField(max_length=50, unique=True)
+    # fullname = models.CharField(max_length=50, unique=True)
     
     
     
@@ -46,6 +46,10 @@ class User(AbstractBaseUser, PermissionsMixin, BaseModel):
     def has_perm(self, perm, obj=None):
         return True
     
+    @property
+    def fullname(self):
+        return f"{self.firstname} {self.lastname}"
+    
 
 class Profile(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='profile', primary_key=True)
@@ -55,7 +59,7 @@ class Profile(models.Model):
     address = models.CharField(max_length=255, null=True, blank=True)
 
     def __str__(self):
-        return f"Profile of {self.user.nickname}"
+        return f"Profile of {self.user.fullname}"
 
 # === User Specialization === #
 class Teacher(models.Model):
@@ -64,13 +68,13 @@ class Teacher(models.Model):
     degree = models.CharField(max_length=100)
 
     def __str__(self):
-        return f"Teacher: {self.user.nickname}"
+        return f"Teacher: {self.user.fullname}"
 
 class Student(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, related_name='student', primary_key=True)
     # birth_date = models.DateField()
     xp = models.IntegerField(default=0)
-    level = models.ForeignKey("Level", on_delete=models.SET_NULL, default=0, null=True)
+    level = models.ForeignKey("Level", on_delete=models.SET_NULL, default=1, null=True)
 
     def __str__(self):
         return f"Student: {self.user.lastname} ({self.user})"
@@ -108,7 +112,7 @@ class Parent(models.Model):
     children = models.ManyToManyField(Student, related_name='parents', blank=True)
 
     def __str__(self):
-        return f"Parent: {self.user.nickname}"
+        return f"Parent: {self.user.fullname}"
     
     def add_child(self, child):
         if isinstance(child, Student):
@@ -151,8 +155,17 @@ class XPTransaction(models.Model):
 class Level(models.Model):
     level = models.IntegerField(default=0, primary_key=True)
     min_xp = models.IntegerField()
+    max_xp = models.IntegerField(null=True, blank=True)
     
+    def save(self, *args, **kwargs):
+        # Save first to ensure we have an ID
+        super().save(*args, **kwargs)
+        # Find the previous level and update its max_xp
+        prev_level = Level.objects.filter(level__lt=self.level).order_by('-level').first()
+        if prev_level:
+            prev_level.max_xp = self.min_xp - 1
+            prev_level.save(update_fields=['max_xp'])
+            
     def __str__(self):
-        return f"Level {self.level} (XP >= {self.min_xp})"
-
-        
+        max_xp_str = f" - {self.max_xp}" if self.max_xp is not None else "+"
+        return f"Level {self.level} (XP: {self.min_xp}{max_xp_str})"

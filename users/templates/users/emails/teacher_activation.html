@@ -1,6 +1,31 @@
-<p>Bonjour {{ user.nickname }},</p>
-<p>Bienvenue sur eCEP, la plateforme qui vous permet de suivre et d'accompagner l'apprentissage de votre enfant ! 🎓</p>
-<p>Veuillez activer votre compte pour accéder à toutes les fonctionnalités.</p>
-<p><a href="{{ url }}">Activer mon compte</a></p>
-<p>À très bientôt sur eCEP,</p>
-<p>L'équipe eCEP</p>
+{% load i18n %}
+
+{% block subject %}
+{% blocktrans %}Activation de votre compte enseignant sur {{ site_name }}{% endblocktrans %}
+{% endblock subject %}
+
+{% block text_body %}
+{% blocktrans %}Bonjour {{ user.first_name }} {{ user.last_name }},{% endblocktrans %}
+
+{% blocktrans %}Félicitations pour votre inscription en tant qu'enseignant sur {{ site_name }} ! 🎉{% endblocktrans %}
+{% blocktrans %}Vous avez désormais accès aux outils pédagogiques pour améliorer l'expérience d'apprentissage de vos élèves.{% endblocktrans %}
+{% trans "Cliquez ici pour activer votre compte enseignant :" %}
+{{ protocol }}://{{ domain }}/{{ url|safe }}
+
+{% trans "Merci de faire partie de notre communauté d'enseignants !" %}
+{% blocktrans %}L'équipe {{ site_name }} 🚀{% endblocktrans %}
+
+{% endblock text_body %}
+
+{% block html_body %}
+{% blocktrans %}Bonjour {{ user.first_name }} {{ user.last_name }},{% endblocktrans %}
+
+<p>{% blocktrans %}Félicitations pour votre inscription en tant qu'enseignant sur {{ site_name }} ! 🎉{% endblocktrans %}</p>
+<p>{% blocktrans %}Vous avez désormais accès aux outils pédagogiques pour améliorer l'expérience d'apprentissage de vos élèves.{% endblocktrans %}</p>
+<p>{% trans "Cliquez ici pour activer votre compte enseignant :" %}</p>
+<p><a href="{{ protocol }}://{{ domain }}/{{ url|safe }}">{{ protocol }}://{{ domain }}/{{ url|safe }}</a></p>
+
+<p>{% trans "Merci de faire partie de notre communauté d'enseignants !" %}</p>
+<p>{% blocktrans %}L'équipe {{ site_name }} 🚀{% endblocktrans %}</p>
+
+{% endblock html_body %}

@@ -58,14 +58,3 @@ class ResourceViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
     
     
-# enrolle_student
-api_view(['POST'])
-def enrolle_student(request):
-    if request.method == 'POST':
-        student = Student.objects.get(user=request.user)
-        student.courses.add(request.data['course_id'])
-        student.save()
-        return Response(status=status.HTTP_201_CREATED)
-    
-    return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
-

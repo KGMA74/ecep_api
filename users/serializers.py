@@ -1,10 +1,10 @@
 from rest_framework import serializers
 from djoser.serializers import UserSerializer
-from .models import Profile, Student, Teacher, Parent, XPTransaction
+from .models import Level, Profile, Student, Teacher, Parent, XPTransaction
 
 class CustomUserSerializer(UserSerializer):
     class Meta(UserSerializer.Meta):
-        fields = UserSerializer.Meta.fields + ('role', 'profile')
+        fields = UserSerializer.Meta.fields + ('role', 'profile', 'teacher', 'student', 'parent')
         
     def to_representation(self, instance):
         data = super().to_representation(instance)
@@ -12,7 +12,15 @@ class CustomUserSerializer(UserSerializer):
         request = self.context.get('request')
         if request and request.method in ['GET']:
             data['profile'] = ProfileSerializer(instance.profile, many=False).data
-        
+            
+            if getattr(instance, 'parent', None):
+                data['parent'] = ParentSerializer(instance.parent, many=False).data
+            if getattr(instance, 'teacher', None):
+                data['teacher'] = TeacherSerializer(instance.teacher, many=False).data
+            if getattr(instance, 'student', None):
+                data['student'] = StudentSerializer(instance.student, many=False).data
+                data['student']['level'] = LevelSerializer(instance.student.level, many=False).data
+       
         return data
 
 class ProfileSerializer(serializers.ModelSerializer):
@@ -34,6 +42,11 @@ class TeacherSerializer(serializers.ModelSerializer):
         
         return data
     
+class LevelSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Level 
+        fields = '__all__'
+    
 class StudentSerializer(serializers.ModelSerializer):
     class Meta:
         model = Student
@@ -45,6 +58,7 @@ class StudentSerializer(serializers.ModelSerializer):
         request = self.context.get('request')
         if request and request.method in ['GET']:
             data['user'] = CustomUserSerializer(instance.user, many=False).data
+            data['level'] = LevelSerializer(instance.level, many=False).data
         
         return data
 
@@ -70,7 +84,6 @@ class AddChildSerializer(serializers.Serializer):
     pass
     student_id = serializers.IntegerField()
     
-
 
 class XPTransactionSerializer(serializers.ModelSerializer):
     class Meta:

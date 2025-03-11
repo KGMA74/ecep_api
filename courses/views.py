@@ -5,7 +5,7 @@ from django.shortcuts import get_object_or_404
 from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, action
 from rest_framework import generics, status, viewsets
-from users.models import Teacher
+from users.models import Student, Teacher
 from .models import Course, CourseRequest, CourseProgress
 from .serializers import CourseSerializer, CourseRequestSerializer, CourseProgressSerializer
 
@@ -32,6 +32,11 @@ class CourseViewSet(viewsets.ModelViewSet):
     queryset = Course.objects.all()
     serializer_class = CourseSerializer
     permission_classes = [AllowAny]
+    
+    def perform_create(self, serializer):
+        user = self.request.user
+        serializer.save(created_by=self.request.user)
+    
     
 
 
@@ -92,20 +97,41 @@ class CourseRequestViewSet(viewsets.ModelViewSet):
         return Response({"message": "Course request rejected."}, status=status.HTTP_200_OK)
 
 
-class CourseProgressView(APIView):
+class CourseProgressViewSet(viewsets.ModelViewSet):
+    serializer_class = CourseProgressSerializer
     permission_classes = [IsAuthenticated]
-
-    def get(self, request, course_id):
-        """ Récupère la progression d'un utilisateur dans un cours spécifique. """
-        course_progress = get_object_or_404(CourseProgress, user=request.user, course_id=course_id)
-        serializer = CourseProgressSerializer(course_progress)
+    
+    def get_queryset(self):
+        return CourseProgress.objects.all()
+    
+    def retrieve(self, request, pk=None):
+        """Get progress for a specific course"""
+        course_progress = get_object_or_404(CourseProgress, student=request.user, course_id=pk)
+        serializer = self.get_serializer(course_progress)
         return Response(serializer.data)
 
-    def patch(self, request, course_id):
-        """ Met à jour la progression ou la note d'un utilisateur pour un cours. """
-        course_progress = get_object_or_404(CourseProgress, user=request.user, course_id=course_id)
+    @action(detail=False, methods=['GET'])
+    def user_progress(self, request):
+        print("**********************************************0")
+        """Get all course progress for authenticated student or specific student"""
+        student_id = request.query_params.get('student_id')
+        print("**********************************************1")
         
-        # Mise à jour de la progression ou de la note
+        if student_id and (request.user.role in ("admin", "teacher") or request.user.role == "parent" and request.user.parent.children.filter(pk=student_id).exists()):
+            queryset = CourseProgress.objects.filter(student_id=student_id)
+            print("**********************************************2")
+        else:
+            # Regular students can only view their own progress
+            queryset = CourseProgress.objects.filter(student__user=request.user)
+            print("**********************************************3")
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    @action(detail=True, methods=['patch'])
+    def update_progress(self, request, pk=None):
+        """Update progress or grade for a course"""
+        course_progress = get_object_or_404(CourseProgress, student=request.user, course_id=pk)
+        
         progress = request.data.get('progress_percentage')
         grade = request.data.get('grade')
 
@@ -115,6 +141,17 @@ class CourseProgressView(APIView):
         if grade is not None:
             course_progress.add_grade(grade)
 
-        # Sérialiser les nouvelles données
-        serializer = CourseProgressSerializer(course_progress)
-        return Response(serializer.data, status=status.HTTP_200_OK)
+        serializer = self.get_serializer(course_progress)
+        return Response(serializer.data)
+    
+api_view(['POST'])
+def enrolle_student(request):
+    if request.method == 'POST':
+        student = Student.objects.get(user=request.user)
+        student.courses.add(request.data['course_id'])
+        student.save()
+        return Response(status=status.HTTP_201_CREATED)
+    
+    return Response(status=status.HTTP_405_METHOD_NOT_ALLOWED)
+
+
