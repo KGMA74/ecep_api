@@ -6,8 +6,8 @@ from rest_framework.permissions import AllowAny
 from rest_framework.decorators import api_view, action
 from rest_framework import generics, status, viewsets
 from users.models import Student, Teacher
-from .models import Course, CourseRequest, CourseProgress
-from .serializers import CourseSerializer, CourseRequestSerializer, CourseProgressSerializer
+from .models import Course, Matter, CourseProgress
+from .serializers import CourseSerializer, MatterSerializer, CourseProgressSerializer
 
 # Create your views here.
 
@@ -37,64 +37,19 @@ class CourseViewSet(viewsets.ModelViewSet):
         user = self.request.user
         serializer.save(created_by=self.request.user)
     
+
+class MatterViewSet(viewsets.ModelViewSet):
+    queryset = Matter.objects.all()
+    serializer_class = MatterSerializer
+    permission_classes = [AllowAny]
     
-
-
-class ReviewCourseRequestView(APIView):
-    permission_classes = [IsAdminUser]
-
-    def post(self, request, request_id):
-        course_request = get_object_or_404(CourseRequest, id=request_id)
-        action = request.data.get("action")
-
-        if action == "approve":
-            course_request.approve(admin_user=request.user)
-            return Response({"message": f"Course approved by {request.user.email}!"})
-
-        elif action == "reject":
-            course_request.reject(admin_user=request.user)
-            return Response({"message": f"Course rejected by {request.user.email}!"})
-
-        return Response({"error": "Invalid action"}, status=400)
-    
-    
-
-class CourseRequestViewSet(viewsets.ModelViewSet):
-    queryset = CourseRequest.objects.all()
-    serializer_class = CourseRequestSerializer
-
-    def get_permissions(self):
-        """Définit les permissions pour chaque action."""
-        if self.action in ["approve", "reject", "list"]:
-            return [IsAdminUser()]
-        return [IsAuthenticated()]
-
-    def perform_create(self, serializer):
-        """Création d'une demande par un professeur uniquement."""
-        user = self.request.user
-        if not user.role == "teacher":
-            return Response({"error": "Only teachers can create course requests."}, status=status.HTTP_403_FORBIDDEN)
-        serializer.save(teacher=user, status="pending")
-
-    @action(detail=True, methods=["post"])
-    def approve(self, request, pk=None):
-        """Un admin valide la demande et crée le cours."""
-        course_request = get_object_or_404(CourseRequest, pk=pk, status="pending")
-        if not request.user.is_staff:
-            return Response({"error": "Only admins can approve requests."}, status=status.HTTP_403_FORBIDDEN)
-        
-        course = course_request.approve(admin_user=request.user)
-        return Response({"message": "Course request approved.", "course": CourseSerializer(course).data})
-
-    @action(detail=True, methods=["post"])
-    def reject(self, request, pk=None):
-        """Un admin refuse la demande."""
-        course_request = get_object_or_404(CourseRequest, pk=pk, status="pending")
-        if not request.user.is_admin:
-            return Response({"error": "Only admins can reject requests."}, status=status.HTTP_403_FORBIDDEN)
-
-        course_request.reject(admin_user=request.user)
-        return Response({"message": "Course request rejected."}, status=status.HTTP_200_OK)
+    @action(detail=True, methods=['GET'])
+    def courses(self, request, pk=None):
+        """Get all courses related to a specific matter"""
+        matter = self.get_object()
+        courses = Course.objects.filter(matter=matter)
+        serializer = CourseSerializer(courses, many=True)
+        return Response(serializer.data)    
 
 
 class CourseProgressViewSet(viewsets.ModelViewSet):

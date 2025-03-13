@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from .models import Course, CourseRequest, CourseProgress
+from .models import Course, Matter, CourseProgress
 
 class CourseSerializer(serializers.ModelSerializer):
     class Meta:
@@ -7,9 +7,9 @@ class CourseSerializer(serializers.ModelSerializer):
         fields = '__all__'
         read_only_fields = ['created_by']        
 
-class CourseRequestSerializer(serializers.ModelSerializer):
+class MatterSerializer(serializers.ModelSerializer):
     class Meta:
-        model = CourseRequest
+        model = Matter
         fields = '__all__'
         
 class CourseProgressSerializer(serializers.ModelSerializer):
