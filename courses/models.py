@@ -9,7 +9,7 @@ class Course(BaseModel):
     start_date = models.DateField()
     end_date = models.DateField()
     credits = models.IntegerField(default=1)
-    matter = models.ForeignKey("Matter", on_delete=models.CASCADE, related_name="courses")
+    matter = models.ForeignKey("Matter", on_delete=models.CASCADE, related_name="courses", default="Mathématiques")
     min_level_required = models.IntegerField(default=1)
     created_by = models.ForeignKey("users.User", on_delete=models.CASCADE, related_name="courses")
     students = models.ManyToManyField("users.Student", related_name="courses_enrolled", blank=True)
@@ -18,7 +18,7 @@ class Course(BaseModel):
         return self.title
 
 class Matter(models.Model):
-    name = models.CharField(max_length=100)
+    name = models.CharField(max_length=100, primary_key=True)
     description = models.TextField()
     
     def __str__(self):
