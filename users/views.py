@@ -2,7 +2,7 @@ from .serializers import (
     ProfileSerializer, TeacherSerializer, StudentSerializer, ParentSerializer,
     EnrollCourseSerializer, AddChildSerializer, XPTransactionSerializer
 )
-from .models import Profile, Teacher, Student, Parent, Student
+from .models import Profile, Teacher, Student, Parent, Student, VerificationCode
 from django.conf import settings 
 from djoser.views import UserViewSet
 from django.shortcuts import get_object_or_404
@@ -15,6 +15,7 @@ from rest_framework.decorators import api_view, action, permission_classes
 from djoser.social.views import ProviderAuthView
 from rest_framework_simplejwt.token_blacklist.models import BlacklistedToken
 from rest_framework_simplejwt.tokens import RefreshToken, AccessToken
+from .email import send_verification_email
 from rest_framework_simplejwt.views import (
     TokenObtainPairView,
     TokenRefreshView,
@@ -129,11 +130,6 @@ class CustomTokenVerifyView(TokenVerifyView):
             
         return super().post(request, *args, **kwargs)
     
-from djoser.views import UserViewSet
-from rest_framework.response import Response
-from rest_framework import status
-from .models import User, Student, Teacher, Parent, Level
-from .serializers import UserSerializer
 
 class CustomUserViewSet(UserViewSet):
 
@@ -250,7 +246,102 @@ class StudentViewSet(viewsets.ModelViewSet):
     queryset = Student.objects.all()
     serializer_class = StudentSerializer
     
+  
 
+    @action(detail=False, methods=['post'])
+    def request_verification(self, request, pk=None):
+        """Envoyer un code de vérification à l'étudiant pour l'ajouter à un parent."""
+        try:
+            student = Student.objects.get(user__email=request.data.get('email'))
+        except Student.DoesNotExist:
+            return Response(
+                {'error': 'No student found with this email address'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        user = request.user
+        
+        # Vérifier que l'utilisateur connecté est un parent
+        try:
+            parent = Parent.objects.get(user=user)
+        except Parent.DoesNotExist:
+            return Response(
+                {'error': 'Only parents can add children to their account'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Créer un code de vérification
+        verification = VerificationCode.objects.create(
+            student=student,
+            parent=parent
+        )
+        
+        # Envoyer l'email à l'étudiant
+        student_email = student.user.email
+        if student_email:
+            send_verification_email(student, verification.code, parent)
+            return Response(
+                {'message': 'Verification code sent to student email'},
+                status=status.HTTP_200_OK
+            )
+        else:
+            return Response(
+                {'error': 'Student has no email address'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+    @action(detail=True, methods=['post'])
+    def verify_and_add(self, request, pk=None):
+        """Vérifier le code et ajouter l'étudiant comme enfant."""
+        student = self.get_object()
+        user = request.user
+        verification_code = request.data.get('code')
+        
+        if not verification_code:
+            return Response(
+                {'error': 'Verification code is required'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        try:
+            parent = Parent.objects.get(user=user)
+        except Parent.DoesNotExist:
+            return Response(
+                {'error': 'Only parents can add children'}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Vérifier le code
+        try:
+            verification = VerificationCode.objects.get(
+                student=student,
+                parent=parent,
+                code=verification_code,
+                is_used=False
+            )
+            
+            if not verification.is_valid:
+                return Response(
+                    {'error': 'Verification code has expired'}, 
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+                
+            # Ajouter l'étudiant à la liste des enfants du parent
+            parent.children.add(student)
+            
+            # Marquer le code comme utilisé
+            verification.is_used = True
+            verification.save()
+            
+            return Response(
+                {'message': f'Student {student.user.firstname} successfully added as child'},
+                status=status.HTTP_200_OK
+            )
+            
+        except VerificationCode.DoesNotExist:
+            return Response(
+                {'error': 'Invalid verification code'}, 
+                status=status.HTTP_400_BAD_REQUEST
+            )
     @action(detail=True, methods=['post'])
     def enroll(self, request, pk=None):
         """Inscrire un étudiant à un cours."""
@@ -297,17 +388,21 @@ class ParentViewSet(viewsets.ModelViewSet):
     queryset = Parent.objects.all()
     serializer_class = ParentSerializer
 
-    @action(detail=True, methods=['post'])
-    def add_child(self, request, pk=None):
-        """Ajouter un enfant à un parent."""
-        parent = self.get_object()
-        serializer = AddChildSerializer(data=request.data)
-        if serializer.is_valid():
-            student = get_object_or_404(Student, id=serializer.validated_data['student_id'])
-            parent.children.add(student)
-            return Response({'message': 'Child added successfully'}, status=status.HTTP_200_OK)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
-
+    @action(detail=False, methods=['get'])
+    def children(self, request):
+        """Récupère la liste des enfants de l'utilisateur parent connecté."""
+        try:
+            parent = Parent.objects.get(user=request.user)
+        except Parent.DoesNotExist:
+            return Response(
+                {'error': 'Only parents can access children information'}, 
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        children = parent.children.all()
+        serializer = StudentSerializer(children, many=True, context={'request': request})
+        return Response(serializer.data, status=status.HTTP_200_OK)
+    
     @action(detail=True, methods=['post'])
     def remove_child(self, request, pk=None):
         """Supprimer un enfant d’un parent."""
@@ -318,6 +413,7 @@ class ParentViewSet(viewsets.ModelViewSet):
             parent.children.remove(student)
             return Response({'message': 'Child removed successfully'}, status=status.HTTP_200_OK)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
     
 
 class UserXPViewSet(viewsets.ViewSet):

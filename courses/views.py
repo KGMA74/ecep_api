@@ -8,6 +8,7 @@ from rest_framework import generics, status, viewsets
 from users.models import Student, Teacher
 from .models import Course, Matter, CourseProgress
 from .serializers import CourseSerializer, MatterSerializer, CourseProgressSerializer
+from users.serializers import StudentSerializer
 
 # Create your views here.
 
@@ -37,6 +38,32 @@ class CourseViewSet(viewsets.ModelViewSet):
         user = self.request.user
         serializer.save(created_by=self.request.user)
     
+    @action(detail=False, methods=['GET'])
+    def user_courses(self, request):
+        """Get courses for a specific user or the authenticated user"""
+        user_id = request.query_params.get('user_id')
+
+        if user_id and request.user.role in ("admin", "teacher"):
+            # Admin can retrieve courses for any user
+            queryset = Course.objects.filter(created_by_id=user_id)
+        else:
+            # Regular users can only view their own courses
+            queryset = Course.objects.filter(created_by=request.user)
+            
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+    
+    @action(detail=True, methods=['GET'])
+    def enrolled_students(self, request, pk=None):
+        """Get all students enrolled in a specific course"""
+        course = self.get_object()
+        students = Student.objects.filter(courses_enrolled=course)
+        
+        # Pass the request context to the serializer
+        serializer = StudentSerializer(students, many=True, context={'request': request})
+        return Response(serializer.data)
+
+    
 
 class MatterViewSet(viewsets.ModelViewSet):
     queryset = Matter.objects.all()
@@ -44,7 +71,7 @@ class MatterViewSet(viewsets.ModelViewSet):
     permission_classes = [AllowAny]
     
     @action(detail=True, methods=['GET'])
-    def courses(self, request, pk=None):
+    def courses(self, request):
         """Get all courses related to a specific matter"""
         matter = self.get_object()
         courses = Course.objects.filter(matter=matter)
@@ -61,7 +88,7 @@ class CourseProgressViewSet(viewsets.ModelViewSet):
     
     def retrieve(self, request, pk=None):
         """Get progress for a specific course"""
-        course_progress = get_object_or_404(CourseProgress, student=request.user, course_id=pk)
+        course_progress = get_object_or_404(CourseProgress, student=request.user.student, course_id=pk)
         serializer = self.get_serializer(course_progress)
         return Response(serializer.data)
 

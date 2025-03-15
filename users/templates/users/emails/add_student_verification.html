@@ -1,0 +1,35 @@
+{% load i18n %}
+
+{% block subject %}
+{% blocktrans %}Vérification pour ajout à un compte parent{% endblocktrans %}
+{% endblock subject %}
+
+{% block text_body %}
+<p>{% blocktrans %}Bonjour, {{ parent_name }} souhaite vous ajouter à son compte parent sur la plateforme.{% endblocktrans %}</p>
+
+<p>{% trans "Veuillez cliquer sur le lien suivant pour confirmer cette demande :" %}</p>
+<p>{{ verification_url }}</p>
+
+<p>{% trans "Ce lien est valide pour" %} {{ valid_hours }} {% trans "heures." %}</p>
+
+<p>{% trans "Si vous n'avez pas demandé à être ajouté à ce compte, vous pouvez ignorer cet email." %}</p>
+
+<p>{% trans "Merci d'utiliser notre plateforme !" %}</p>
+
+<p>{% blocktrans %}L'équipe {{ site_name }}{% endblocktrans %}</p>
+{% endblock text_body %}
+
+{% block html_body %}
+<p>{% blocktrans %}Bonjour, {{ parent_name }} souhaite vous ajouter à son compte parent sur la plateforme.{% endblocktrans %}</p>
+
+<p>{% trans "Veuillez cliquer sur le lien suivant pour confirmer cette demande :" %}</p>
+<p><a href="{{ verification_url }}/?code={{code}}&student_id={{student_id}}" target="_blank">cliquez ici</a></p>
+
+<p>{% trans "Ce lien est valide pour" %} {{ valid_hours }} {% trans "heures." %}</p>
+
+<p>{% trans "Si vous n'avez pas demandé à être ajouté à ce compte, vous pouvez ignorer cet email." %}</p>
+
+<p>{% trans "Merci d'utiliser notre plateforme !" %}</p>
+
+<p>{% blocktrans %}L'équipe {{ site_name }}{% endblocktrans %}</p>
+{% endblock html_body %}

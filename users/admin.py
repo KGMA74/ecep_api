@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import User, Student, Parent, Level, Profile, Teacher
+from .models import User, Student, Parent, Level, Profile, Teacher, VerificationCode
 
 # Register your models here.
 admin.site.register(
@@ -10,4 +10,4 @@ admin.site.register(
     ordering=['email']
 )
 
-admin.site.register([Student, Parent, Teacher, Level, Profile])
+admin.site.register([Student, Parent, Teacher, Level, Profile, VerificationCode])

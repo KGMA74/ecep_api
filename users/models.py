@@ -2,6 +2,11 @@ from django.db import models
 from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+import random
+import string
+from django.core.mail import send_mail
+from django.utils import timezone
+from datetime import timedelta
 from .manager import UserManager
 from core.models import BaseModel
 from courses.models import Course
@@ -125,23 +130,32 @@ class Parent(models.Model):
     def get_children(self):
         return self.children.all()
     
+class VerificationCode(models.Model):
+    student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name='verification_codes')
+    parent = models.ForeignKey(Parent, on_delete=models.CASCADE, related_name='verification_requests')
+    code = models.CharField(max_length=8)
+    created_at = models.DateTimeField(auto_now_add=True)
+    expires_at = models.DateTimeField()
+    is_used = models.BooleanField(default=False)
+    
+    def save(self, *args, **kwargs):
+        if not self.code:
+            self.code = ''.join(random.choices(string.ascii_uppercase + string.digits, k=8))
+        if not self.expires_at:
+            self.expires_at = timezone.now() + timedelta(hours=24)
+        super().save(*args, **kwargs)
+        
+    @property
+    def is_valid(self):
+        return not self.is_used and self.expires_at > timezone.now()
+    
 #pour la creation d un profile auto associe un new user
 @receiver(post_save, sender=User)
 def create_user_profile(sender, instance, created, **kwargs):
     if created:
         Profile.objects.create(user=instance)
         
-        # role_mapping = {
-        #             'teacher': Teacher,
-        #             'student': Student,
-        #             'parent': Parent
-        #         }
         
-        # ModelClass = role_mapping.get(instance.role)
-        
-        # if ModelClass:
-        #     ModelClass.objects.get_or_create(user=instance)
-            
 class XPTransaction(models.Model):
     Student = models.ForeignKey(Student, on_delete=models.CASCADE, related_name="xp_transactions")
     xp_points = models.IntegerField()
