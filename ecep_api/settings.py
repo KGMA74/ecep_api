@@ -279,7 +279,7 @@ SIMPLE_JWT = {
 # email.setting 
 
 EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+# EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
 
 EMAIL_HOST = getenv('EMAIL_HOST')
 EMAIL_FROM = getenv('EMAIL_FROM')

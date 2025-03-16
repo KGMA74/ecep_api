@@ -31,12 +31,15 @@ def send_verification_email(student, verification_code, parent):
     # Create plain text version by stripping HTML
     plain_message = strip_tags(html_message)
     
-    send_mail(
-        'Vérification pour ajout à un compte parent',
-        plain_message,
-        settings.DEFAULT_FROM_EMAIL,
-        [student.user.email],
-        html_message=html_message,
-        fail_silently=False,
-    )
-    
+    try:
+        print(f"Envoi de l'e-mail à {student.user.email}")
+        send_mail(
+            'Vérification pour ajout à un compte parent',
+            plain_message,
+            settings.EMAIL_FROM,
+            [student.user.email],
+            html_message=html_message,
+            fail_silently=False,
+        )
+    except Exception as e:
+        print(f"Erreur lors de l'envoi de l'e-mail : {e}")
